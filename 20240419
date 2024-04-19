@@ -1,0 +1,106 @@
+### 4/19
+
+utコマンドの修正。2つの配列token_list, typeをmain内に入れてほかの関数に引数で渡すようにしたら -c 1-3のようなハイフンの入った入力に対してうまく実行されなかった(ファイルの内容をそのまま出力していた) 
+
+オプションの引数をパースして受け取る配列token_listは引数の数が事前にわかっているので、静的配列でいいのではないかと思ったけど、2や-3, 1-3のような様々な形の引数を受け取る必要があるので動的配列にする必要がある
+
+配列をmain関数内で宣言してから、ほかの関数に先頭のポインタを渡して、関数内でmallocでメモリを割り与えるという処理に変更したら、segment errorが出てしまった。
+
+検索してたら、これが原因ぽい
+
+https://oswald.hatenablog.com/entry/20081210/1228920110
+
+実行例
+
+```
+  1 #include<stdio.h>
+  2 #include<stdlib.h>
+  3
+  4 void hairetu_change(int *hairetu) {
+  5   hairetu = malloc(sizeof(int)*5);
+  6   for(int i = 0; i < 5; i++) {
+  7     hairetu[i] = 100*i;
+  8   }
+  9 }
+ 10
+ 11 int main() {
+ 12   int *hairetu;
+ 13   hairetu_change(hairetu);
+ 14   for(int i = 0; i < 5; i++) {
+ 15     printf("%d\n", hairetu[i]);
+ 16   }
+ 17 }
+```
+
+実行結果
+
+```
+-98693133
+-1991643855
+-1991745839
+-461158174
+1163153648
+```
+
+```
+#include<stdio.h>
+#include<stdlib.h>
+
+int* hairetu_change(int *hairetu) {
+  hairetu = malloc(sizeof(int)*5);
+  for(int i = 0; i < 5; i++) {
+    hairetu[i] = 100*i;
+  }
+  return hairetu;
+}
+
+int main() {
+  int *hairetu;
+  int *new_hairetu = hairetu_change(hairetu);
+  for(int i = 0; i < 5; i++) {
+    printf("%d\n", new_hairetu[i]);
+  }
+}
+```
+
+```
+0
+100
+200
+300
+400
+```
+
+実行例
+```
+#include<stdio.h>
+#include<stdlib.h>
+
+void hairetu_change(int **hairetu) {
+  *hairetu = malloc(sizeof(int)*5);
+  for(int i = 0; i < 5; i++) {
+    (*hairetu)[i] = 100*i;
+  }
+}
+
+int main() {
+  int *hairetu = NULL;
+  hairetu_change(&hairetu);
+  for(int i = 0; i < 5; i++) {
+    printf("%d\n", hairetu[i]);
+  }
+}
+```
+
+実行結果
+```
+0
+100
+200
+300
+400
+```
+
+
+
+
